@@ -4,21 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BIOMED-SCAN | Diagnóstico Pulmonar</title>
-    <!-- Tipografías estilo pixel art -->
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
     <!-- PANTALLA 1: MENÚ PRINCIPAL -->
-    <div id="pantalla-menu" class="pantalla activa">
+    <div id="pantalla-menu" class="pantalla">
         <div class="expediente-caja">
             <div class="sello-superior">DEPARTAMENTO DE BIOMEDICINA // ARCHIVO #402</div>
             
             <h1>DIAGNÓSTICO<br>PULMONAR</h1>
             <p class="subtitulo">Protocolo de detección de anomalías (Límite: 60s)</p>
 
-            <!-- Nota recomendada para nuevos jugadores -->
             <div class="nota-aviso">
                 <span class="etiqueta-aviso">NOTA DEL SUPERVISOR:</span>
                 Si es tu primera vez en el puesto, selecciona primero el <strong>MODO SIN IA</strong> para evaluar tu rendimiento humano sin asistencia.
@@ -27,28 +25,57 @@
             <div class="botones-menu">
                 <button class="btn-retro btn-sin-ia" onclick="iniciarJuego(false)">
                     ▶ JUGAR SIN IA
-                    <span class="btn-desc">Revisión manual completa (Alta carga)</span>
+                    <span class="btn-desc">50 muestras sin filtrar. Revisión manual completa.</span>
                 </button>
 
-                <button class="btn-retro btn-con-ia" onclick="iniciarJuego(true)">
+                <button class="btn-retro btn-con-ia" onclick="avisoModoIA()">
                     ▶ JUGAR CON ASISTENTE IA
-                    <span class="btn-desc">Filtrado inteligente de muestras críticas</span>
+                    <span class="btn-desc">[En desarrollo - Próximo paso]</span>
                 </button>
+            </div>
+            <p id="mensaje-menu" class="mensaje-menu"></p>
+        </div>
+    </div>
+
+    <!-- PANTALLA 2: MESA DE TRABAJO -->
+    <div id="pantalla-juego" class="pantalla oculta">
+        <div class="barra-superior">
+            <span id="indicador-modo">MODO: MANUAL (SIN IA)</span>
+            <span id="contador-hallazgos">ANOMALÍAS: 0 / 5</span>
+            <span id="temporizador">TIEMPO: 01:00</span>
+            <button class="btn-pequeno" onclick="volverAlMenu()">[ ABORTAR ]</button>
+        </div>
+        
+        <div id="mesa-trabajo">
+            <!-- Zona izquierda donde se esparcen las radiografías -->
+            <div id="zona-dispersion">
+                <div class="instruccion-mesa">
+                    ARRASTRA LAS RADIOGRAFÍAS PARA INSPECCIONARLAS. LLEVA LAS QUE TENGAN MANCHAS ROJAS A LA BANDEJA DERECHA.
+                </div>
+            </div>
+
+            <!-- Zona derecha donde hay que depositar las imágenes con manchas rojas -->
+            <div id="zona-entrega">
+                <div class="cabecera-bandeja">
+                    <h2>BANDEJA DE ANOMALÍAS</h2>
+                    <p>Depositar aquí muestras con tejido rojo</p>
+                </div>
+                <div id="contenedor-confirmadas"></div>
+                <div id="feedback-bandeja" class="feedback-bandeja"></div>
             </div>
         </div>
     </div>
 
-    <!-- PANTALLA 2: MESA DE TRABAJO (Preparada para el siguiente paso) -->
-    <div id="pantalla-juego" class="pantalla oculta">
-        <div class="barra-superior">
-            <span id="indicador-modo">MODO: MANUAL</span>
-            <span id="temporizador">TIEMPO: 01:00</span>
-            <button class="btn-pequeno" onclick="volverAlMenu()">[ SALIR AL MENÚ ]</button>
-        </div>
-        
-        <div id="mesa-trabajo">
-            <!-- Aquí irán las radiografías de los pulmones -->
-            <p class="texto-provisional">Mesa de exploración lista. Aquí colocaremos las muestras...</p>
+    <!-- MODAL DE RESULTADO AL TERMINAR EL TIEMPO O GANAR -->
+    <div id="modal-resultado" class="modal-overlay oculta">
+        <div class="expediente-caja modal-caja">
+            <div id="sello-resultado" class="sello-superior">INFORME DE TURNO</div>
+            <h2 id="titulo-resultado">TIEMPO AGOTADO</h2>
+            <p id="texto-resultado" class="texto-informe"></p>
+            <div class="botones-modal">
+                <button class="btn-retro btn-sin-ia" onclick="iniciarJuego(false)">↻ REINTENTAR TURNO</button>
+                <button class="btn-retro btn-con-ia" onclick="volverAlMenu()">◀ VOLVER AL MENÚ</button>
+            </div>
         </div>
     </div>
 
