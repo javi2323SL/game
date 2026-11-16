@@ -1,1 +1,57 @@
-hghdgwdhgw
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BIOMED-SCAN | Diagnóstico Pulmonar</title>
+    <!-- Tipografías estilo pixel art -->
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- PANTALLA 1: MENÚ PRINCIPAL -->
+    <div id="pantalla-menu" class="pantalla activa">
+        <div class="expediente-caja">
+            <div class="sello-superior">DEPARTAMENTO DE BIOMEDICINA // ARCHIVO #402</div>
+            
+            <h1>DIAGNÓSTICO<br>PULMONAR</h1>
+            <p class="subtitulo">Protocolo de detección de anomalías (Límite: 60s)</p>
+
+            <!-- Nota recomendada para nuevos jugadores -->
+            <div class="nota-aviso">
+                <span class="etiqueta-aviso">NOTA DEL SUPERVISOR:</span>
+                Si es tu primera vez en el puesto, selecciona primero el <strong>MODO SIN IA</strong> para evaluar tu rendimiento humano sin asistencia.
+            </div>
+
+            <div class="botones-menu">
+                <button class="btn-retro btn-sin-ia" onclick="iniciarJuego(false)">
+                    ▶ JUGAR SIN IA
+                    <span class="btn-desc">Revisión manual completa (Alta carga)</span>
+                </button>
+
+                <button class="btn-retro btn-con-ia" onclick="iniciarJuego(true)">
+                    ▶ JUGAR CON ASISTENTE IA
+                    <span class="btn-desc">Filtrado inteligente de muestras críticas</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PANTALLA 2: MESA DE TRABAJO (Preparada para el siguiente paso) -->
+    <div id="pantalla-juego" class="pantalla oculta">
+        <div class="barra-superior">
+            <span id="indicador-modo">MODO: MANUAL</span>
+            <span id="temporizador">TIEMPO: 01:00</span>
+            <button class="btn-pequeno" onclick="volverAlMenu()">[ SALIR AL MENÚ ]</button>
+        </div>
+        
+        <div id="mesa-trabajo">
+            <!-- Aquí irán las radiografías de los pulmones -->
+            <p class="texto-provisional">Mesa de exploración lista. Aquí colocaremos las muestras...</p>
+        </div>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>
