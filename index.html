@@ -28,12 +28,11 @@
                     <span class="btn-desc">50 muestras sin filtrar. Revisión manual completa.</span>
                 </button>
 
-                <button class="btn-retro btn-con-ia" onclick="avisoModoIA()">
+                <button class="btn-retro btn-con-ia" onclick="iniciarJuego(true)">
                     ▶ JUGAR CON ASISTENTE IA
-                    <span class="btn-desc">[En desarrollo - Próximo paso]</span>
+                    <span class="btn-desc">Triaje inteligente: filtra 50 muestras a las 10 más críticas.</span>
                 </button>
             </div>
-            <p id="mensaje-menu" class="mensaje-menu"></p>
         </div>
     </div>
 
@@ -49,6 +48,12 @@
         <div id="mesa-trabajo">
             <!-- Zona izquierda donde se esparcen las radiografías -->
             <div id="zona-dispersion">
+                <!-- Banner informativo exclusivo del Modo IA -->
+                <div id="banner-ia" class="banner-ia oculta">
+                    <span class="ia-badge">[ASISTENTE IA ACTIVO]</span>
+                    <span>40 muestras sanas descartadas automáticamente. Valida las <strong>5 anomalías reales</strong> entre estas 10 muestras prioritarias.</span>
+                </div>
+
                 <div class="instruccion-mesa">
                     ARRASTRA LAS RADIOGRAFÍAS PARA INSPECCIONARLAS. LLEVA LAS QUE TENGAN MANCHAS ROJAS A LA BANDEJA DERECHA.
                 </div>
@@ -73,8 +78,9 @@
             <h2 id="titulo-resultado">TIEMPO AGOTADO</h2>
             <p id="texto-resultado" class="texto-informe"></p>
             <div class="botones-modal">
-                <button class="btn-retro btn-sin-ia" onclick="iniciarJuego(false)">↻ REINTENTAR TURNO</button>
-                <button class="btn-retro btn-con-ia" onclick="volverAlMenu()">◀ VOLVER AL MENÚ</button>
+                <button id="btn-reintentar" class="btn-retro btn-sin-ia" onclick="iniciarJuego(modoConIA)">↻ REINTENTAR</button>
+                <button id="btn-cambiar-modo" class="btn-retro btn-con-ia" onclick="iniciarJuego(true)">▶ PROBAR CON IA</button>
+                <button class="btn-retro btn-neutro" onclick="volverAlMenu()">◀ MENÚ</button>
             </div>
         </div>
     </div>
