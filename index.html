@@ -25,12 +25,12 @@
             <div class="botones-menu">
                 <button class="btn-retro btn-sin-ia" onclick="iniciarJuego(false)">
                     ▶ JUGAR SIN IA
-                    <span class="btn-desc">50 muestras sin filtrar. Revisión manual completa.</span>
+                    <span class="btn-desc">95 muestras sin filtrar. Revisión manual completa.</span>
                 </button>
 
                 <button class="btn-retro btn-con-ia" onclick="iniciarJuego(true)">
                     ▶ JUGAR CON ASISTENTE IA
-                    <span class="btn-desc">Triaje inteligente: filtra 50 muestras a las 10 más críticas.</span>
+                    <span class="btn-desc">Escáner IA: analiza las 95 muestras, descarta ruido y resalta anomalías.</span>
                 </button>
             </div>
         </div>
@@ -48,11 +48,27 @@
         <div id="mesa-trabajo">
             <!-- Zona izquierda donde se esparcen las radiografías -->
             <div id="zona-dispersion">
-                <!-- Banner informativo exclusivo del Modo IA -->
-                <div id="banner-ia" class="banner-ia oculta">
-                    <span class="ia-badge">[ASISTENTE IA ACTIVO]</span>
-                    <span>40 muestras sanas descartadas automáticamente. Valida las <strong>5 anomalías reales</strong> entre estas 10 muestras prioritarias.</span>
+                
+                <!-- MAQUINITA ESCÁNER DE IA (Solo visible en modo con IA) -->
+                <div id="maquina-ia" class="maquina-ia oculta">
+                    <div class="maquina-leds">
+                        <span class="led led-verde activo"></span>
+                        <span id="led-escaneo" class="led led-amarillo"></span>
+                        <span class="etiqueta-modelo">BIOMED-IA v2.4</span>
+                    </div>
+                    <div class="maquina-pantalla">
+                        <span id="texto-maquina-ia">INICIALIZANDO ESCÁNER...</span>
+                        <div class="barra-progreso-ia">
+                            <div id="progreso-ia-relleno"></div>
+                        </div>
+                    </div>
+                    <div class="maquina-rendija">
+                        <span>OPTIC-SCAN</span>
+                    </div>
                 </div>
+
+                <!-- HAZ LÁSER DE ESCANEO -->
+                <div id="laser-ia" class="laser-ia oculta"></div>
 
                 <div class="instruccion-mesa">
                     ARRASTRA LAS RADIOGRAFÍAS PARA INSPECCIONARLAS. LLEVA LAS QUE TENGAN MANCHAS ROJAS A LA BANDEJA DERECHA.
