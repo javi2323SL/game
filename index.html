@@ -30,7 +30,7 @@
 
                 <button class="btn-retro btn-con-ia" onclick="iniciarJuego(true)">
                     ▶ JUGAR CON ASISTENTE IA
-                    <span class="btn-desc">Escáner IA: analiza las 95 muestras, descarta ruido y resalta anomalías.</span>
+                    <span class="btn-desc">95 muestras + escáner activable por botón IA que ilumina las anomalías.</span>
                 </button>
             </div>
         </div>
@@ -54,17 +54,17 @@
                     <div class="maquina-leds">
                         <span class="led led-verde activo"></span>
                         <span id="led-escaneo" class="led led-amarillo"></span>
-                        <span class="etiqueta-modelo">BIOMED-IA v2.4</span>
+                        <span class="etiqueta-modelo">BIOMED-IA</span>
                     </div>
                     <div class="maquina-pantalla">
-                        <span id="texto-maquina-ia">INICIALIZANDO ESCÁNER...</span>
+                        <span id="texto-maquina-ia">ESPERANDO ORDEN: PULSA EL BOTÓN [IA] PARA ESCANEAR</span>
                         <div class="barra-progreso-ia">
                             <div id="progreso-ia-relleno"></div>
                         </div>
                     </div>
-                    <div class="maquina-rendija">
-                        <span>OPTIC-SCAN</span>
-                    </div>
+                    <button id="btn-activar-ia" class="btn-maquina-ia listo" onclick="activarEscaneoIA()">
+                        IA
+                    </button>
                 </div>
 
                 <!-- HAZ LÁSER DE ESCANEO -->
