@@ -1,9 +1,8 @@
 // Configuración general del lote del paciente
-const TOTAL_LOTE_PACIENTE = 95;      // Saturación de muestras en ambos modos al empezar
+const TOTAL_LOTE_PACIENTE = 95;      // 95 radiografías esparcidas en ambos modos
 const OBJETIVO_MARCADOR = 5;         // Lo que exige el protocolo en pantalla
 const INFECTADAS_REALES_SIN_IA = 4;  // En modo sin IA solo hay 4 para que no se pueda completar
 const INFECTADAS_REALES_CON_IA = 5;  // En modo con IA sí están las 5 anomalías reales
-const SANAS_QUE_MANTIENE_IA = 10;    // Placas sanas que la IA deja sin descartar (descarta 80)
 const TIEMPO_INICIAL = 60;           // 1 minuto
 
 let modoConIA = false;
@@ -12,16 +11,16 @@ let intervaloTimer = null;
 let anomaliasEncontradas = 0;
 let juegoActivo = false;
 let escaneandoIA = false;
+let iaYaActivada = false;
 
-// Control de animaciones de la IA para poder cancelarlas si se sale al menú
+// Control de animación del láser
 let animacionLaserId = null;
-let timeoutInicioEscaneo = null;
 
 // Variables para controlar el arrastre estilo Papers, Please
 let tarjetaActual = null;
 let offsetX = 0;
 let offsetY = 0;
-let zIndexMaximo = 10;
+let zIndexMaximo = 120;
 
 // Sintetizador de sonidos retro
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -62,13 +61,12 @@ function reproducirSonido(tipo) {
     } else if (tipo === 'ia_inicio') {
         osc.type = 'sine';
         osc.frequency.setValueAtTime(320, ahora);
-        osc.frequency.exponentialRampToValueAtTime(640, ahora + 0.25);
-        gain.gain.setValueAtTime(0.08, ahora);
-        gain.gain.exponentialRampToValueAtTime(0.01, ahora + 0.28);
+        osc.frequency.exponentialRampToValueAtTime(640, ahora + 0.22);
+        gain.gain.setValueAtTime(0.09, ahora);
+        gain.gain.exponentialRampToValueAtTime(0.01, ahora + 0.25);
         osc.start(ahora);
-        osc.stop(ahora + 0.28);
+        osc.stop(ahora + 0.25);
     } else if (tipo === 'ia_ping') {
-        // Pitido agudo de radar cuando el láser detecta y hace brillar una foto marcada
         osc.type = 'sine';
         osc.frequency.setValueAtTime(980, ahora);
         osc.frequency.setValueAtTime(1320, ahora + 0.05);
@@ -90,9 +88,7 @@ function reproducirSonido(tipo) {
 
 function limpiarAnimacionesIA() {
     if (animacionLaserId) cancelAnimationFrame(animacionLaserId);
-    if (timeoutInicioEscaneo) clearTimeout(timeoutInicioEscaneo);
     animacionLaserId = null;
-    timeoutInicioEscaneo = null;
     escaneandoIA = false;
 
     document.getElementById('laser-ia').classList.add('oculta');
@@ -112,8 +108,9 @@ function iniciarJuego(usarIA) {
     // Reiniciar estado
     tiempoRestante = TIEMPO_INICIAL;
     anomaliasEncontradas = 0;
-    zIndexMaximo = 100;
+    zIndexMaximo = 120;
     juegoActivo = true;
+    iaYaActivada = false;
 
     actualizarMarcadores();
     document.getElementById('contenedor-confirmadas').innerHTML = '';
@@ -121,28 +118,29 @@ function iniciarJuego(usarIA) {
 
     const indicador = document.getElementById('indicador-modo');
     const maquinaIA = document.getElementById('maquina-ia');
+    const btnIA = document.getElementById('btn-activar-ia');
 
-    // Siempre generamos el montón caótico de 95 placas
+    // Generar siempre las 95 radiografías desordenadas
     generarMuestrasEnMesa();
 
     if (modoConIA) {
         indicador.textContent = "MODO: ASISTENTE IA";
         indicador.style.color = "#6ee7b7";
         maquinaIA.classList.remove('oculta');
-        document.getElementById('texto-maquina-ia').textContent = "DETECTADO LOTE DE 95 PLACAS. INICIANDO ESCÁNER...";
-        document.getElementById('progreso-ia-relleno').style.width = "0%";
 
-        // Lanzar la animación de la maquinita IA antes de arrancar la cuenta atrás
-        escaneandoIA = true;
-        timeoutInicioEscaneo = setTimeout(() => {
-            ejecutarAnimacionMaquinaIA();
-        }, 550);
+        // Preparar la maquinita esperando a que el jugador pulse el botón "IA"
+        document.getElementById('texto-maquina-ia').textContent = "LOTE LISTO (95 PLACAS). PULSA EL BOTÓN [IA] PARA ILUMINAR ANOMALÍAS";
+        document.getElementById('progreso-ia-relleno').style.width = "0%";
+        btnIA.disabled = false;
+        btnIA.classList.remove('usado');
+        btnIA.classList.add('listo');
     } else {
         indicador.textContent = "MODO: MANUAL (SIN IA)";
         indicador.style.color = "#f5d0a9";
         maquinaIA.classList.add('oculta');
-        iniciarTemporizador();
     }
+
+    iniciarTemporizador();
 }
 
 function volverAlMenu() {
@@ -188,30 +186,18 @@ function generarMuestrasEnMesa() {
         indicesInfectados.add(Math.floor(Math.random() * TOTAL_LOTE_PACIENTE));
     }
 
-    // En modo IA, elegir 10 placas sanas que se quedarán en la mesa (el resto serán descartadas por el láser)
-    const indicesSanasMantenidas = new Set();
-    if (modoConIA) {
-        while (indicesSanasMantenidas.size < SANAS_QUE_MANTIENE_IA) {
-            const rnd = Math.floor(Math.random() * TOTAL_LOTE_PACIENTE);
-            if (!indicesInfectados.has(rnd)) {
-                indicesSanasMantenidas.add(rnd);
-            }
-        }
-    }
-
     const anchoZona = zona.clientWidth - 135;
     const altoZona = zona.clientHeight - 175;
-    const margenSuperior = modoConIA ? 92 : 15; // Dejar espacio arriba para la maquinita IA
+    const margenSuperior = modoConIA ? 94 : 15; // Dejar espacio arriba para la maquinita IA
 
     for (let i = 0; i < TOTAL_LOTE_PACIENTE; i++) {
         const tieneAnomalia = indicesInfectados.has(i);
         const card = document.createElement('div');
         card.className = 'radiografia-card';
         card.dataset.infectada = tieneAnomalia ? 'true' : 'false';
-        card.dataset.mantenerIA = (tieneAnomalia || indicesSanasMantenidas.has(i)) ? 'true' : 'false';
         card.dataset.escaneada = 'false';
 
-        // Posición completamente esparcida sobre la mesa (sin ordenar)
+        // Posición esparcida sobre la mesa (sin ordenar)
         const posX = Math.max(18, Math.floor(Math.random() * anchoZona));
         const posY = Math.max(margenSuperior, margenSuperior + Math.floor(Math.random() * (altoZona - margenSuperior)));
         card.style.left = `${posX}px`;
@@ -238,7 +224,22 @@ function generarMuestrasEnMesa() {
     }
 }
 
-// --- ANIMACIÓN DE LA MAQUINITA ESCÁNER DE IA ---
+// --- ACCIÓN DEL BOTÓN "IA" DE LA MAQUINITA ---
+function activarEscaneoIA() {
+    if (!modoConIA || !juegoActivo || iaYaActivada || escaneandoIA) return;
+
+    iaYaActivada = true;
+    escaneandoIA = true;
+
+    const btnIA = document.getElementById('btn-activar-ia');
+    btnIA.disabled = true;
+    btnIA.classList.remove('listo');
+    btnIA.classList.add('usado');
+
+    ejecutarAnimacionMaquinaIA();
+}
+
+// --- ANIMACIÓN DEL ESCÁNER: SOLO ILUMINA LAS ANOMALÍAS, NO ELIMINA NINGUNA ---
 function ejecutarAnimacionMaquinaIA() {
     if (!juegoActivo) return;
 
@@ -251,14 +252,14 @@ function ejecutarAnimacionMaquinaIA() {
 
     laser.classList.remove('oculta');
     ledEscaneo.classList.add('parpadeando');
-    textoMaquina.textContent = "ESCANEANDO TEJIDO PULMONAR Y FILTRANDO RUIDO...";
+    textoMaquina.textContent = "ESCANEANDO 95 RADIOGRAFÍAS...";
     reproducirSonido('ia_inicio');
 
-    const yInicio = 82;
+    const yInicio = 84;
     const yFin = zona.clientHeight - 10;
-    const duracionMs = 2600;
+    const duracionMs = 2200;
     const tiempoInicio = performance.now();
-    let detectadasEnEscaneo = 0;
+    let iluminadas = 0;
 
     function pasoAnimacion(ahora) {
         if (!juegoActivo) return;
@@ -266,11 +267,10 @@ function ejecutarAnimacionMaquinaIA() {
         const progreso = Math.min(1, (ahora - tiempoInicio) / duracionMs);
         const yActual = yInicio + (yFin - yInicio) * progreso;
 
-        // Mover el haz láser y llenar la barra de la maquinita
         laser.style.top = `${yActual}px`;
         barraProgreso.style.width = `${Math.floor(progreso * 100)}%`;
 
-        // Comprobar qué radiografías acaba de atravesar el láser
+        // Al pasar el láser, las marcadas brillan y suben al frente; las sanas se quedan intactas
         tarjetas.forEach(card => {
             if (card.dataset.escaneada === 'true') return;
             const centroTarjetaY = card.offsetTop + (card.offsetHeight / 2);
@@ -279,8 +279,7 @@ function ejecutarAnimacionMaquinaIA() {
                 card.dataset.escaneada = 'true';
 
                 if (card.dataset.infectada === 'true') {
-                    // ¡Anomalía detectada! La maquinita la hace BRILLAR y la sube al frente
-                    detectadasEnEscaneo++;
+                    iluminadas++;
                     zIndexMaximo++;
                     card.style.zIndex = zIndexMaximo;
                     card.classList.add('brillo-ia');
@@ -292,10 +291,7 @@ function ejecutarAnimacionMaquinaIA() {
                     }
 
                     reproducirSonido('ia_ping');
-                    textoMaquina.textContent = `ANOMALÍA RESALTADA (${detectadasEnEscaneo}/${INFECTADAS_REALES_CON_IA})...`;
-                } else if (card.dataset.mantenerIA === 'false') {
-                    // Placa sana descartada automáticamente por la IA
-                    card.classList.add('descartada-ia');
+                    textoMaquina.textContent = `ANOMALÍA DETECTADA E ILUMINADA (${iluminadas})...`;
                 }
             }
         });
@@ -303,14 +299,11 @@ function ejecutarAnimacionMaquinaIA() {
         if (progreso < 1) {
             animacionLaserId = requestAnimationFrame(pasoAnimacion);
         } else {
-            // Fin del escaneo: apagar láser y arrancar el turno del médico
             laser.classList.add('oculta');
             ledEscaneo.classList.remove('parpadeando');
-            textoMaquina.textContent = "ESCANEO COMPLETO: 80 SANAS DESCARTADAS // 5 ANOMALÍAS ILUMINADAS";
+            textoMaquina.textContent = `ESCANEO COMPLETO: ${iluminadas} ANOMALÍAS ILUMINADAS ENTRE LAS 95 PLACAS`;
             reproducirSonido('ia_fin');
-
             escaneandoIA = false;
-            iniciarTemporizador();
         }
     }
 
@@ -478,12 +471,12 @@ function finalizarPartida(victoria) {
         if (victoria) {
             titulo.style.color = '#6ee7b7';
             titulo.textContent = 'DIAGNÓSTICO ÓPTIMO (CON IA)';
-            texto.innerHTML = `Has validado las <strong>${OBJETIVO_MARCADOR} anomalías críticas</strong> en solo <strong>${tiempoUsado} segundos</strong>.<br><br>El escáner <strong>BIOMED-IA</strong> analizó las 95 radiografías en segundos, filtró el ruido visual y resaltó las zonas sospechosas para que tú, como médico, pudieras confirmar el diagnóstico sin demora.`;
+            texto.innerHTML = `Has validado las <strong>${OBJETIVO_MARCADOR} anomalías críticas</strong> entre las <strong>${TOTAL_LOTE_PACIENTE} radiografías</strong> en solo <strong>${tiempoUsado} segundos</strong>.<br><br>Al activar el escáner <strong>BIOMED-IA</strong>, el sistema resaltó con luz las placas sospechosas sin ocultar el resto del expediente, permitiéndote encontrarlas al instante y tomar la decisión clínica final.`;
         } else {
             reproducirSonido('error');
             titulo.style.color = '#e05353';
             titulo.textContent = 'TIEMPO AGOTADO';
-            texto.innerHTML = `Has validado <strong>${anomaliasEncontradas} de ${OBJETIVO_MARCADOR}</strong> muestras. Arrastra las radiografías iluminadas por el escáner IA hacia la bandeja derecha.`;
+            texto.innerHTML = `Has validado <strong>${anomaliasEncontradas} de ${OBJETIVO_MARCADOR}</strong> muestras. Recuerda pulsar el botón verde <strong>IA</strong> de la consola superior para iluminar las radiografías con manchas rojas.`;
         }
     } else {
         btnCambiarModo.classList.remove('oculta');
