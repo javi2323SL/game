@@ -21,6 +21,7 @@ let tarjetaActual = null;
 let offsetX = 0;
 let offsetY = 0;
 let zIndexMaximo = 120;
+let ultimoXArrastre = 0;
 
 // Sintetizador de sonidos retro
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -219,7 +220,8 @@ function generarMuestrasEnMesa() {
         card.appendChild(canvas);
         card.appendChild(etiqueta);
 
-        card.addEventListener('mousedown', (e) => iniciarArrastre(e, card));
+        // pointerdown funciona tanto con ratón como con pantalla táctil (iPad/móvil)
+        card.addEventListener('pointerdown', (e) => iniciarArrastre(e, card));
         zona.appendChild(card);
     }
 }
@@ -361,10 +363,11 @@ function dibujarLobulo(ctx, x, y, w, h, colorBase, colorLuz) {
     ctx.fillRect(x + 2, y + 3, w - 4, h - 7);
 }
 
-// --- LÓGICA DE ARRASTRE DE DOCUMENTOS ---
+// --- LÓGICA DE ARRASTRE (COMPATIBLE CON RATÓN, IPAD Y MÓVIL) ---
 function iniciarArrastre(e, card) {
     if (!juegoActivo || escaneandoIA || card.classList.contains('radiografia-confirmada')) return;
 
+    e.preventDefault();
     tarjetaActual = card;
     zIndexMaximo++;
     card.style.zIndex = zIndexMaximo;
@@ -373,12 +376,16 @@ function iniciarArrastre(e, card) {
     const rect = card.getBoundingClientRect();
     offsetX = e.clientX - rect.left;
     offsetY = e.clientY - rect.top;
+    ultimoXArrastre = e.clientX;
 
     reproducirSonido('agarrar');
 }
 
-document.addEventListener('mousemove', (e) => {
+document.addEventListener('pointermove', (e) => {
     if (!tarjetaActual || !juegoActivo) return;
+
+    e.preventDefault();
+    ultimoXArrastre = e.clientX;
 
     const zona = document.getElementById('zona-dispersion');
     const zonaRect = zona.getBoundingClientRect();
@@ -402,9 +409,9 @@ document.addEventListener('mousemove', (e) => {
     } else {
         bandeja.classList.remove('resaltado-hover');
     }
-});
+}, { passive: false });
 
-document.addEventListener('mouseup', (e) => {
+function soltarTarjeta(e) {
     if (!tarjetaActual) return;
 
     const bandeja = document.getElementById('zona-entrega');
@@ -412,12 +419,16 @@ document.addEventListener('mouseup', (e) => {
     bandeja.classList.remove('resaltado-hover');
     tarjetaActual.classList.remove('arrastrando');
 
-    if (e.clientX >= bandejaRect.left && juegoActivo) {
+    const posXFinal = e.clientX || ultimoXArrastre;
+    if (posXFinal >= bandejaRect.left && juegoActivo) {
         evaluarEntrega(tarjetaActual);
     }
 
     tarjetaActual = null;
-});
+}
+
+document.addEventListener('pointerup', soltarTarjeta);
+document.addEventListener('pointercancel', soltarTarjeta);
 
 function evaluarEntrega(card) {
     const esInfectada = card.dataset.infectada === 'true';
