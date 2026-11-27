@@ -3,6 +3,7 @@ const TOTAL_LOTE_PACIENTE = 95;      // 95 radiografías esparcidas en ambos mod
 const OBJETIVO_MARCADOR = 5;         // Lo que exige el protocolo en pantalla
 const INFECTADAS_REALES_SIN_IA = 4;  // En modo sin IA solo hay 4 para que no se pueda completar
 const INFECTADAS_REALES_CON_IA = 5;  // En modo con IA sí están las 5 anomalías reales
+const FALSOS_POSITIVOS_IA = 2;       // 2 radiografías sanas que la IA marcará por error
 const TIEMPO_INICIAL = 60;           // 1 minuto
 
 let modoConIA = false;
@@ -181,10 +182,21 @@ function generarMuestrasEnMesa() {
 
     const cantidadInfectadas = modoConIA ? INFECTADAS_REALES_CON_IA : INFECTADAS_REALES_SIN_IA;
 
-    // Elegir qué índices tendrán manchas rojas
+    // Elegir qué índices tendrán manchas rojas reales
     const indicesInfectados = new Set();
     while (indicesInfectados.size < cantidadInfectadas) {
         indicesInfectados.add(Math.floor(Math.random() * TOTAL_LOTE_PACIENTE));
+    }
+
+    // En modo IA, elegir también 2 placas SANAS que la IA marcará como falsos positivos
+    const indicesFalsosPositivos = new Set();
+    if (modoConIA) {
+        while (indicesFalsosPositivos.size < FALSOS_POSITIVOS_IA) {
+            const candidato = Math.floor(Math.random() * TOTAL_LOTE_PACIENTE);
+            if (!indicesInfectados.has(candidato)) {
+                indicesFalsosPositivos.add(candidato);
+            }
+        }
     }
 
     const anchoZona = zona.clientWidth - 135;
@@ -193,9 +205,13 @@ function generarMuestrasEnMesa() {
 
     for (let i = 0; i < TOTAL_LOTE_PACIENTE; i++) {
         const tieneAnomalia = indicesInfectados.has(i);
+        const esFalsoPositivo = indicesFalsosPositivos.has(i);
+
         const card = document.createElement('div');
         card.className = 'radiografia-card';
         card.dataset.infectada = tieneAnomalia ? 'true' : 'false';
+        // La IA marcará tanto las 5 reales como las 2 sanas (falsos positivos)
+        card.dataset.marcadaPorIA = (tieneAnomalia || esFalsoPositivo) ? 'true' : 'false';
         card.dataset.escaneada = 'false';
 
         // Posición esparcida sobre la mesa (sin ordenar)
@@ -205,7 +221,7 @@ function generarMuestrasEnMesa() {
         card.style.top = `${posY}px`;
         card.style.zIndex = 10 + i;
 
-        // Lienzo pixel art del pulmón
+        // Lienzo pixel art del pulmón (solo tiene mancha roja si tieneAnomalia es true)
         const canvas = document.createElement('canvas');
         canvas.width = 32;
         canvas.height = 36;
@@ -241,7 +257,7 @@ function activarEscaneoIA() {
     ejecutarAnimacionMaquinaIA();
 }
 
-// --- ANIMACIÓN DEL ESCÁNER: SOLO ILUMINA LAS ANOMALÍAS, NO ELIMINA NINGUNA ---
+// --- ANIMACIÓN DEL ESCÁNER: ILUMINA LAS 5 REALES + 2 FALSOS POSITIVOS ---
 function ejecutarAnimacionMaquinaIA() {
     if (!juegoActivo) return;
 
@@ -272,7 +288,7 @@ function ejecutarAnimacionMaquinaIA() {
         laser.style.top = `${yActual}px`;
         barraProgreso.style.width = `${Math.floor(progreso * 100)}%`;
 
-        // Al pasar el láser, las marcadas brillan y suben al frente; las sanas se quedan intactas
+        // Al pasar el láser, las marcadas por IA brillan y suben al frente
         tarjetas.forEach(card => {
             if (card.dataset.escaneada === 'true') return;
             const centroTarjetaY = card.offsetTop + (card.offsetHeight / 2);
@@ -280,7 +296,7 @@ function ejecutarAnimacionMaquinaIA() {
             if (yActual >= centroTarjetaY) {
                 card.dataset.escaneada = 'true';
 
-                if (card.dataset.infectada === 'true') {
+                if (card.dataset.marcadaPorIA === 'true') {
                     iluminadas++;
                     zIndexMaximo++;
                     card.style.zIndex = zIndexMaximo;
@@ -288,12 +304,12 @@ function ejecutarAnimacionMaquinaIA() {
 
                     const estado = card.querySelector('.estado-etiqueta');
                     if (estado) {
-                        estado.textContent = 'IA:!';
+                        estado.textContent = 'IA:?';
                         estado.classList.add('tag-alerta-ia');
                     }
 
                     reproducirSonido('ia_ping');
-                    textoMaquina.textContent = `ANOMALÍA DETECTADA E ILUMINADA (${iluminadas})...`;
+                    textoMaquina.textContent = `POSIBLE ANOMALÍA ILUMINADA (${iluminadas})...`;
                 }
             }
         });
@@ -303,7 +319,7 @@ function ejecutarAnimacionMaquinaIA() {
         } else {
             laser.classList.add('oculta');
             ledEscaneo.classList.remove('parpadeando');
-            textoMaquina.textContent = `ESCANEO COMPLETO: ${iluminadas} ANOMALÍAS ILUMINADAS ENTRE LAS 95 PLACAS`;
+            textoMaquina.textContent = `ESCANEO COMPLETO: ${iluminadas} POSIBLES ANOMALÍAS (REVISAR ANTES DE VALIDAR)`;
             reproducirSonido('ia_fin');
             escaneandoIA = false;
         }
@@ -455,11 +471,19 @@ function evaluarEntrega(card) {
         tiempoRestante = Math.max(0, tiempoRestante - 5);
         actualizarMarcadores();
 
+        // Si era un falso positivo marcado por la IA, quitamos el brillo tras comprobar que está sana
+        card.classList.remove('brillo-ia');
+        const estado = card.querySelector('.estado-etiqueta');
+        if (estado) {
+            estado.textContent = 'SANA';
+            estado.classList.remove('tag-alerta-ia');
+        }
+
         bandeja.classList.add('error-flash');
         setTimeout(() => bandeja.classList.remove('error-flash'), 350);
 
         feedback.style.color = '#f87171';
-        feedback.textContent = '✗ TEJIDO SANO (-5 SEG)';
+        feedback.textContent = '✗ FALSO POSITIVO: TEJIDO SANO (-5s)';
 
         card.style.left = '250px';
     }
@@ -481,13 +505,13 @@ function finalizarPartida(victoria) {
 
         if (victoria) {
             titulo.style.color = '#6ee7b7';
-            titulo.textContent = 'DIAGNÓSTICO ÓPTIMO (CON IA)';
-            texto.innerHTML = `Has validado las <strong>${OBJETIVO_MARCADOR} anomalías críticas</strong> entre las <strong>${TOTAL_LOTE_PACIENTE} radiografías</strong> en solo <strong>${tiempoUsado} segundos</strong>.<br><br>Al activar el escáner <strong>BIOMED-IA</strong>, el sistema resaltó con luz las placas sospechosas sin ocultar el resto del expediente, permitiéndote encontrarlas al instante y tomar la decisión clínica final.`;
+            titulo.textContent = 'DIAGNÓSTICO ÓPTIMO (IA + EXPERTO)';
+            texto.innerHTML = `Has validado las <strong>${OBJETIVO_MARCADOR} anomalías reales</strong> entre las <strong>${TOTAL_LOTE_PACIENTE} radiografías</strong> en <strong>${tiempoUsado} segundos</strong>.<br><br>El escáner <strong>BIOMED-IA</strong> iluminó 7 placas sospechosas, incluyendo <strong>${FALSOS_POSITIVOS_IA} falsos positivos</strong> (tejido sano). Esto demuestra que la IA acelera el cribado masivo, pero sigue siendo imprescindible un <strong>experto humano</strong> que verifique el resultado y evite errores clínicos.`;
         } else {
             reproducirSonido('error');
             titulo.style.color = '#e05353';
             titulo.textContent = 'TIEMPO AGOTADO';
-            texto.innerHTML = `Has validado <strong>${anomaliasEncontradas} de ${OBJETIVO_MARCADOR}</strong> muestras. Recuerda pulsar el botón verde <strong>IA</strong> de la consola superior para iluminar las radiografías con manchas rojas.`;
+            texto.innerHTML = `Has validado <strong>${anomaliasEncontradas} de ${OBJETIVO_MARCADOR}</strong> muestras. Recuerda pulsar el botón verde <strong>IA</strong> y comprobar visualmente qué placas iluminadas tienen realmente tejido rojo (la IA puede marcar falsos positivos).`;
         }
     } else {
         btnCambiarModo.classList.remove('oculta');
